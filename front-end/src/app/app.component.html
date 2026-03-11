@@ -1,111 +1,101 @@
 <div class="container">
 
-  <!-- 1. AUTHENTICATION SECTION (Login / Register) -->
+  <!-- AUTHENTICATION SECTION -->
   <div *ngIf="!isLoggedIn" class="auth-wrapper">
     <div class="auth-card">
-      <h1>📝 Welcome to To-Do App</h1>
-
-      <!-- Login Form -->
-      <div *ngIf="!showRegister">
-        <h2>Login</h2>
-        <div class="form-group">
-          <input type="email" [(ngModel)]="loginData.email" placeholder="Email">
-          <input type="password" [(ngModel)]="loginData.password" placeholder="Password">
-          <button class="primary-btn" (click)="login()">Login</button>
-        </div>
-        <p class="toggle-text">
-          Don't have an account? 
-          <span (click)="showRegister = true" class="link-text">Register here</span>
-        </p>
+      <div class="auth-header">
+        <span class="emoji-logo">📝</span>
+        <h1>Welcome back</h1>
+        <p>Manage your daily tasks efficiently</p>
       </div>
 
-      <!-- Register Form -->
-      <div *ngIf="showRegister">
-        <h2>Create Account</h2>
+      <!-- Login -->
+      <div *ngIf="!showRegister" class="fade-in">
+        <div class="form-group">
+          <input type="email" [(ngModel)]="loginData.email" placeholder="Email address">
+          <input type="password" [(ngModel)]="loginData.password" placeholder="Password">
+          <button class="btn btn-primary" (click)="login()">Login</button>
+        </div>
+        <p class="auth-footer">Don't have an account? <span (click)="showRegister = true">Register</span></p>
+      </div>
+
+      <!-- Register -->
+      <div *ngIf="showRegister" class="fade-in">
         <div class="form-group">
           <input type="text" [(ngModel)]="registerData.name" placeholder="Full Name">
-          <input type="email" [(ngModel)]="registerData.email" placeholder="Email">
+          <input type="email" [(ngModel)]="registerData.email" placeholder="Email address">
           <input type="password" [(ngModel)]="registerData.password" placeholder="Password">
-          <button class="primary-btn" (click)="register()">Create Account</button>
+          <button class="btn btn-primary" (click)="register()">Create Account</button>
         </div>
-        <p class="toggle-text">
-          Already have an account? 
-          <span (click)="showRegister = false" class="link-text">Login here</span>
-        </p>
+        <p class="auth-footer">Already have an account? <span (click)="showRegister = false">Login</span></p>
       </div>
     </div>
   </div>
 
-  <!-- 2. MAIN TASK APP (Shown only after Login) -->
-  <div *ngIf="isLoggedIn" class="app-content">
-    <div class="header">
-      <h1>My Tasks</h1>
-      <button class="logout-btn" (click)="logout()">Logout</button>
-    </div>
+  <!-- MAIN APP CONTENT -->
+  <div *ngIf="isLoggedIn" class="app-card fade-in">
+    <header class="app-header">
+      <div class="title-group">
+        <h1>My Tasks</h1>
+        <span class="badge">{{ remainingTasks }} tasks remaining</span>
+      </div>
+      <button class="logout-btn" (click)="logout()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
+        Logout
+      </button>
+    </header>
 
-    <!-- Add Task Input -->
     <div class="input-section">
       <input type="text" placeholder="What needs to be done?" [(ngModel)]="newTask" (keyup.enter)="addTask()"/>
       <button class="add-btn" (click)="addTask()">Add Task</button>
     </div>
 
-    <div class="status-bar">
-      <p>Remaining Tasks: <strong>{{ remainingTasks }}</strong></p>
-    </div>
-
-    <!-- Active Tasks List -->
-    <div class="section-container">
-      <h2>Active Tasks</h2>
+    <section class="task-section">
+      <h3>Active Tasks</h3>
+      <div *ngIf="tasks.length === 0" class="empty-state">
+        ✨ All caught up! Add a new task to get started.
+      </div>
       <ul class="task-list">
         <li *ngFor="let task of tasks; trackBy: trackByFn" class="task-item">
-          <div class="task-info">
+          <label class="checkbox-container">
             <input type="checkbox" [(ngModel)]="task.done" (change)="toggleDone(task)"/>
-            <span [class.done-text]="task.done">{{ task.text }}</span>
-          </div>
-          <div class="task-actions">
-            <button class="finish-btn" (click)="moveToFinished(task)" [disabled]="!task.done">Finish</button>
-            <button class="delete-btn" (click)="deleteTask(task)">Delete</button>
+            <span class="checkmark"></span>
+            <span class="task-text" [class.done]="task.done">{{ task.text }}</span>
+          </label>
+          <div class="button-group">
+            <button class="btn-finish" (click)="moveToFinished(task)" [disabled]="!task.done">Finish</button>
+            <button class="btn-delete" (click)="deleteTask(task)">Delete</button>
           </div>
         </li>
       </ul>
-      <p *ngIf="tasks.length === 0" class="empty-msg">No active tasks. Add one above!</p>
-    </div>
+    </section>
 
-    <!-- History Section -->
-    <div class="history-wrapper">
+    <hr class="divider">
+
+    <section class="history-section">
       <div class="history-header">
-        <h2>History</h2>
-        <button class="clear-btn" (click)="clearHistory()" *ngIf="finishedTasks.length > 0 || deletedTasks.length > 0">Clear History</button>
+        <h3>History</h3>
+        <button class="btn-clear" (click)="clearHistory()" *ngIf="finishedTasks.length || deletedTasks.length">Clear</button>
       </div>
-
+      
       <div class="history-grid">
-        <!-- Finished Tasks Column -->
-        <div class="history-column">
-          <h3>Completed</h3>
-          <ul class="history-list">
-            <li *ngFor="let task of finishedTasks">
-              <span class="history-icon">✔</span> 
-              <span class="history-text">{{ task.text }}</span>
-              <small class="timestamp">{{ task.completedAt }}</small>
+        <div class="history-col">
+          <h4>Finished</h4>
+          <ul>
+            <li *ngFor="let task of finishedTasks" class="history-item completed">
+              <span>{{ task.text }}</span>
             </li>
           </ul>
-          <p *ngIf="finishedTasks.length === 0" class="empty-msg-small">None yet.</p>
         </div>
-
-        <!-- Deleted Tasks Column -->
-        <div class="history-column">
-          <h3>Deleted</h3>
-          <ul class="history-list">
-            <li *ngFor="let task of deletedTasks">
-              <span class="history-icon red">❌</span> 
-              <span class="history-text">{{ task.text }}</span>
-              <small class="timestamp">{{ task.deletedAt }}</small>
+        <div class="history-col">
+          <h4>Deleted</h4>
+          <ul>
+            <li *ngFor="let task of deletedTasks" class="history-item deleted">
+              <span>{{ task.text }}</span>
             </li>
           </ul>
-          <p *ngIf="deletedTasks.length === 0" class="empty-msg-small">None yet.</p>
         </div>
       </div>
-    </div>
+    </section>
   </div>
-
 </div>

@@ -11,8 +11,9 @@ import { Observable } from 'rxjs';
 export class AuthInterceptor implements HttpInterceptor {
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // 1. Get the token from local storage
-    const token = localStorage.getItem('token');
+    
+    // Interceptor now looks in sessionStorage for the token
+    const token = sessionStorage.getItem('token');
 
     let authReq = req.clone({
       setHeaders: {

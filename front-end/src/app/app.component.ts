@@ -9,13 +9,14 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
+  
   // Authentication State
   isLoggedIn = false;
   showRegister = false;
   loginData = { email: '', password: '' };
   registerData = { name: '', email: '', password: '' };
 
-  // Task Data (Explicitly typed to avoid 'never' error)
+  // Task Data
   newTask = '';
   tasks: Task[] = [];
   finishedTasks: Task[] = [];
@@ -24,8 +25,8 @@ export class AppComponent implements OnInit {
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
   ngOnInit() {
-    // Check if user is already logged in on refresh
-    const token = localStorage.getItem('token');
+    // We now use sessionStorage so the user is logged out when the tab is closed
+    const token = sessionStorage.getItem('token');
     if (token) {
       this.isLoggedIn = true;
       this.loadAllTasks();
@@ -37,27 +38,27 @@ export class AppComponent implements OnInit {
   login() {
     this.http.post('http://localhost:8000/api/login', this.loginData).subscribe({
       next: (res: any) => {
-        localStorage.setItem('token', res.token);
+        sessionStorage.setItem('token', res.token); // Switched to sessionStorage
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Login failed: ' + err.error.message)
+      error: (err) => alert('Login failed: ' + (err.error?.message || 'Check your credentials'))
     });
   }
 
   register() {
     this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
       next: (res: any) => {
-        localStorage.setItem('token', res.token);
+        sessionStorage.setItem('token', res.token); // Switched to sessionStorage
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Registration failed: ' + err.error.message)
+      error: (err) => alert('Registration failed: ' + (err.error?.message || 'Check your data'))
     });
   }
 
   logout() {
-    localStorage.removeItem('token');
+    sessionStorage.removeItem('token'); // Switched to sessionStorage
     this.isLoggedIn = false;
     this.tasks = [];
     this.finishedTasks = [];
@@ -68,7 +69,6 @@ export class AppComponent implements OnInit {
 
   loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
-      // Sort tasks into categories based on their properties
       this.tasks = data.filter(t => !t.completedAt && !t.deletedAt);
       this.finishedTasks = data.filter(t => t.completedAt && !t.deletedAt);
       this.deletedTasks = data.filter(t => t.deletedAt);
@@ -78,27 +78,24 @@ export class AppComponent implements OnInit {
   addTask() {
     if (!this.newTask.trim()) return;
 
-     const taskData = {
-    text: this.newTask,
-    done: false
-  };
+    const taskData = {
+      text: this.newTask,
+      done: false
+    };
 
-  this.todoService.addTask(taskData).subscribe({
-    next: (newTaskFromServer) => {
-      this.tasks.push(newTaskFromServer);
-      this.newTask = ''; // Clear the input on success
-    },
-    error: (err) => {
-      console.error(err);
-      // This will pop up a window telling you exactly what Laravel said
-      const message = err.error?.message || err.statusText || 'Unknown Error';
-      alert('Failed to add task: ' + message);
-    }
-  });
-}
+    this.todoService.addTask(taskData).subscribe({
+      next: (newTaskFromServer) => {
+        this.tasks.push(newTaskFromServer);
+        this.newTask = ''; 
+      },
+      error: (err) => {
+        const message = err.error?.message || err.statusText || 'Unknown Error';
+        alert('Failed to add task: ' + message);
+      }
+    });
+  }
 
   toggleDone(task: Task) {
-    // Note: task.done is already updated by ngModel in HTML
     task.completedAt = task.done ? new Date().toLocaleString() : undefined;
     this.todoService.updateTask(task).subscribe();
   }
@@ -106,7 +103,6 @@ export class AppComponent implements OnInit {
   deleteTask(task: Task) {
     task.deletedAt = new Date().toLocaleString();
     this.todoService.updateTask(task).subscribe(() => {
-      // Move from active list to deleted list in UI
       this.tasks = this.tasks.filter(t => t.id !== task.id);
       this.deletedTasks.push(task);
     });
@@ -117,15 +113,12 @@ export class AppComponent implements OnInit {
     
     task.completedAt = new Date().toLocaleString();
     this.todoService.updateTask(task).subscribe(() => {
-      // Move from active list to finished list in UI
       this.tasks = this.tasks.filter(t => t.id !== task.id);
       this.finishedTasks.push(task);
     });
   }
 
   clearHistory() {
-    // For now, we clear the local UI arrays. 
-    // In a full app, you would send a DELETE request to the server for these tasks.
     this.finishedTasks = [];
     this.deletedTasks = [];
   }
@@ -137,6 +130,4 @@ export class AppComponent implements OnInit {
   trackByFn(index: number, item: Task) {
     return item.id;
   }
-
-
 }
