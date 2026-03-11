@@ -1,0 +1,111 @@
+<div class="container">
+
+  <!-- 1. AUTHENTICATION SECTION (Login / Register) -->
+  <div *ngIf="!isLoggedIn" class="auth-wrapper">
+    <div class="auth-card">
+      <h1>📝 Welcome to To-Do App</h1>
+
+      <!-- Login Form -->
+      <div *ngIf="!showRegister">
+        <h2>Login</h2>
+        <div class="form-group">
+          <input type="email" [(ngModel)]="loginData.email" placeholder="Email">
+          <input type="password" [(ngModel)]="loginData.password" placeholder="Password">
+          <button class="primary-btn" (click)="login()">Login</button>
+        </div>
+        <p class="toggle-text">
+          Don't have an account? 
+          <span (click)="showRegister = true" class="link-text">Register here</span>
+        </p>
+      </div>
+
+      <!-- Register Form -->
+      <div *ngIf="showRegister">
+        <h2>Create Account</h2>
+        <div class="form-group">
+          <input type="text" [(ngModel)]="registerData.name" placeholder="Full Name">
+          <input type="email" [(ngModel)]="registerData.email" placeholder="Email">
+          <input type="password" [(ngModel)]="registerData.password" placeholder="Password">
+          <button class="primary-btn" (click)="register()">Create Account</button>
+        </div>
+        <p class="toggle-text">
+          Already have an account? 
+          <span (click)="showRegister = false" class="link-text">Login here</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. MAIN TASK APP (Shown only after Login) -->
+  <div *ngIf="isLoggedIn" class="app-content">
+    <div class="header">
+      <h1>My Tasks</h1>
+      <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+
+    <!-- Add Task Input -->
+    <div class="input-section">
+      <input type="text" placeholder="What needs to be done?" [(ngModel)]="newTask" (keyup.enter)="addTask()"/>
+      <button class="add-btn" (click)="addTask()">Add Task</button>
+    </div>
+
+    <div class="status-bar">
+      <p>Remaining Tasks: <strong>{{ remainingTasks }}</strong></p>
+    </div>
+
+    <!-- Active Tasks List -->
+    <div class="section-container">
+      <h2>Active Tasks</h2>
+      <ul class="task-list">
+        <li *ngFor="let task of tasks; trackBy: trackByFn" class="task-item">
+          <div class="task-info">
+            <input type="checkbox" [(ngModel)]="task.done" (change)="toggleDone(task)"/>
+            <span [class.done-text]="task.done">{{ task.text }}</span>
+          </div>
+          <div class="task-actions">
+            <button class="finish-btn" (click)="moveToFinished(task)" [disabled]="!task.done">Finish</button>
+            <button class="delete-btn" (click)="deleteTask(task)">Delete</button>
+          </div>
+        </li>
+      </ul>
+      <p *ngIf="tasks.length === 0" class="empty-msg">No active tasks. Add one above!</p>
+    </div>
+
+    <!-- History Section -->
+    <div class="history-wrapper">
+      <div class="history-header">
+        <h2>History</h2>
+        <button class="clear-btn" (click)="clearHistory()" *ngIf="finishedTasks.length > 0 || deletedTasks.length > 0">Clear History</button>
+      </div>
+
+      <div class="history-grid">
+        <!-- Finished Tasks Column -->
+        <div class="history-column">
+          <h3>Completed</h3>
+          <ul class="history-list">
+            <li *ngFor="let task of finishedTasks">
+              <span class="history-icon">✔</span> 
+              <span class="history-text">{{ task.text }}</span>
+              <small class="timestamp">{{ task.completedAt }}</small>
+            </li>
+          </ul>
+          <p *ngIf="finishedTasks.length === 0" class="empty-msg-small">None yet.</p>
+        </div>
+
+        <!-- Deleted Tasks Column -->
+        <div class="history-column">
+          <h3>Deleted</h3>
+          <ul class="history-list">
+            <li *ngFor="let task of deletedTasks">
+              <span class="history-icon red">❌</span> 
+              <span class="history-text">{{ task.text }}</span>
+              <small class="timestamp">{{ task.deletedAt }}</small>
+            </li>
+          </ul>
+          <p *ngIf="deletedTasks.length === 0" class="empty-msg-small">None yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

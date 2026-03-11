@@ -1,0 +1,16 @@
+body {
+    font-family: 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', sans-serif;
+    margin: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  li {
+    margin: 10px 0;
+  }
+  
+  button {
+    margin-left: 10px;
+  }
