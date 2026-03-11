@@ -9,7 +9,9 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  
+  title(title: any) {
+    throw new Error('Method not implemented.');
+  }
   // Authentication State
   isLoggedIn = false;
   showRegister = false;
@@ -18,14 +20,14 @@ export class AppComponent implements OnInit {
 
   // Task Data
   newTask = '';
-  tasks: Task[] = [];
+  tasks: any[] = []; // Used 'any' to allow 'isEditing' and 'tempText' UI properties
   finishedTasks: Task[] = [];
   deletedTasks: Task[] = [];
 
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
   ngOnInit() {
-    // We now use sessionStorage so the user is logged out when the tab is closed
+    // sessionStorage ensures logout when the tab/browser is closed
     const token = sessionStorage.getItem('token');
     if (token) {
       this.isLoggedIn = true;
@@ -38,34 +40,34 @@ export class AppComponent implements OnInit {
   login() {
     this.http.post('http://localhost:8000/api/login', this.loginData).subscribe({
       next: (res: any) => {
-        sessionStorage.setItem('token', res.token); // Switched to sessionStorage
+        sessionStorage.setItem('token', res.token);
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Login failed: ' + (err.error?.message || 'Check your credentials'))
+      error: (err) => alert('Login failed: ' + (err.error?.message || 'Invalid credentials'))
     });
   }
 
   register() {
     this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
       next: (res: any) => {
-        sessionStorage.setItem('token', res.token); // Switched to sessionStorage
+        sessionStorage.setItem('token', res.token);
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Registration failed: ' + (err.error?.message || 'Check your data'))
+      error: (err) => alert('Registration failed: ' + (err.error?.message || 'Email already exists'))
     });
   }
 
   logout() {
-    sessionStorage.removeItem('token'); // Switched to sessionStorage
+    sessionStorage.removeItem('token');
     this.isLoggedIn = false;
     this.tasks = [];
     this.finishedTasks = [];
     this.deletedTasks = [];
   }
 
-  // --- TASK LOGIC ---
+  // --- TASK CRUD LOGIC ---
 
   loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
@@ -77,25 +79,50 @@ export class AppComponent implements OnInit {
 
   addTask() {
     if (!this.newTask.trim()) return;
-
-    const taskData = {
-      text: this.newTask,
-      done: false
-    };
+    const taskData = { text: this.newTask, done: false };
 
     this.todoService.addTask(taskData).subscribe({
-      next: (newTaskFromServer) => {
-        this.tasks.push(newTaskFromServer);
-        this.newTask = ''; 
+      next: (newTask) => {
+        this.tasks.push(newTask);
+        this.newTask = '';
       },
-      error: (err) => {
-        const message = err.error?.message || err.statusText || 'Unknown Error';
-        alert('Failed to add task: ' + message);
+      error: (err) => alert('Failed to add task: ' + err.statusText)
+    });
+  }
+
+  // --- INLINE EDIT LOGIC ---
+
+  startEdit(task: any) {
+    task.tempText = task.text;
+    task.isEditing = true;
+  }
+
+  cancelEdit(task: any) {
+    task.isEditing = false;
+    task.tempText = '';
+  }
+
+  saveEdit(task: any) {
+    if (!task.tempText.trim()) return;
+    const originalText = task.text;
+    task.text = task.tempText;
+
+    this.todoService.updateTask(task).subscribe({
+      next: () => {
+        task.isEditing = false;
+        task.tempText = '';
+      },
+      error: () => {
+        task.text = originalText; // Revert on error
+        alert('Update failed');
       }
     });
   }
 
+  // --- STATUS UPDATES ---
+
   toggleDone(task: Task) {
+    // task.done is updated by ngModel automatically
     task.completedAt = task.done ? new Date().toLocaleString() : undefined;
     this.todoService.updateTask(task).subscribe();
   }
@@ -110,7 +137,6 @@ export class AppComponent implements OnInit {
 
   moveToFinished(task: Task) {
     if (!task.done) return;
-    
     task.completedAt = new Date().toLocaleString();
     this.todoService.updateTask(task).subscribe(() => {
       this.tasks = this.tasks.filter(t => t.id !== task.id);
