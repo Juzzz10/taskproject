@@ -44,15 +44,29 @@ export class AppComponent implements OnInit {
   }
 
   register() {
-    this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
-      next: (res: any) => {
-        sessionStorage.setItem('token', res.token);
-        this.isLoggedIn = true;
-        this.loadAllTasks();
-      },
-      error: (err) => alert('Registration failed')
-    });
-  }
+  this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
+    next: (res: any) => {
+      sessionStorage.setItem('token', res.token);
+      this.isLoggedIn = true;
+      this.loadAllTasks();
+    },
+    error: (err) => {
+
+      if (err.status === 422) {
+        const errors = err.error.errors;
+     
+        if (errors && errors.email) {
+          alert('Email already exists');
+        } else {
+          alert('Registration failed: Please check your details');
+        }
+      } else {
+      
+        alert('Registration failed: Server error');
+      }
+    }
+  });
+}
 
   logout() {
     sessionStorage.removeItem('token');
