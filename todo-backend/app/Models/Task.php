@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
-    protected $fillable = ['text', 'done', 'completedAt', 'deletedAt', 'user_id'];
+    protected $fillable = ['text', 'done', 'completedAt', 'deletedAt', 'user_name'];
 
     // Relationship: A task belongs to one user
     public function user()

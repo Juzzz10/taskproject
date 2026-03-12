@@ -1,6 +1,6 @@
 <div class="container">
 
-  <!-- 1. AUTHENTICATION (Login/Register Card) -->
+  <!-- 1. AUTHENTICATION SECTION -->
   <div *ngIf="!isLoggedIn" class="auth-wrapper">
     <div class="auth-card">
       <div class="auth-header">
@@ -10,7 +10,7 @@
       </div>
 
       <!-- Login View -->
-      <div *ngIf="!showRegister" class="fade-in">
+      <div *ngIf="!showRegister">
         <div class="form-group">
           <input type="email" [(ngModel)]="loginData.email" placeholder="Email address">
           <input type="password" [(ngModel)]="loginData.password" placeholder="Password">
@@ -20,7 +20,7 @@
       </div>
 
       <!-- Register View -->
-      <div *ngIf="showRegister" class="fade-in">
+      <div *ngIf="showRegister">
         <div class="form-group">
           <input type="text" [(ngModel)]="registerData.name" placeholder="Full Name">
           <input type="email" [(ngModel)]="registerData.email" placeholder="Email address">
@@ -32,37 +32,26 @@
     </div>
   </div>
 
-  <!-- 2. MAIN APP CONTENT (Task List) -->
+  <!-- 2. MAIN TASK APP -->
   <div *ngIf="isLoggedIn" class="app-card fade-in">
     <header class="app-header">
       <div class="title-group">
         <h1>My Tasks</h1>
         <span class="badge">{{ remainingTasks }} tasks remaining</span>
       </div>
-      <button class="logout-btn" (click)="logout()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-        </svg>
-        Logout
-      </button>
+      <button class="logout-btn" (click)="logout()">Logout</button>
     </header>
 
-    <!-- Input Section -->
     <div class="input-section">
-      <input type="text" placeholder="" [(ngModel)]="newTask" (keyup.enter)="addTask()"/>
+      <input type="text" placeholder="What needs to be done?" [(ngModel)]="newTask" (keyup.enter)="addTask()"/>
       <button class="add-btn" (click)="addTask()">Add Task</button>
     </div>
 
-    <!-- Active Tasks List -->
+    <!-- ACTIVE TASKS SECTION -->
     <section class="task-section">
-      <h3>Active Tasks</h3>
-      <div *ngIf="tasks.length === 0" class="empty-state">
-        ✨ All caught up! Add a new task to get started.
-      </div>
+      <h3>{{ tasks.length > 0 ? 'Active Tasks' : 'No Active Tasks' }}</h3>
       <ul class="task-list">
-        <li *ngFor="let task of tasks; trackBy: trackByFn" class="task-item" [class.editing-row]="task.isEditing">
-          
+        <li *ngFor="let task of tasks; trackBy: trackByFn" class="task-item">
           <div class="task-info">
             <input type="checkbox" [(ngModel)]="task.done" (change)="toggleDone(task)" [disabled]="task.isEditing"/>
             
@@ -72,23 +61,15 @@
             </span>
 
             <!-- Edit Mode Input -->
-            <input *ngIf="task.isEditing" 
-                   [(ngModel)]="task.tempText" 
-                   class="edit-mode-input"
-                   (keyup.enter)="saveEdit(task)"
-                   (keyup.esc)="cancelEdit(task)" 
-                   autofocus />
+            <input *ngIf="task.isEditing" [(ngModel)]="task.tempText" class="edit-mode-input" (keyup.enter)="saveEdit(task)" (keyup.esc)="cancelEdit(task)" autofocus />
           </div>
 
           <div class="button-group">
-            <!-- Normal Buttons -->
             <ng-container *ngIf="!task.isEditing">
               <button class="btn-edit" (click)="startEdit(task)">Edit</button>
               <button class="btn-finish" (click)="moveToFinished(task)" [disabled]="!task.done">Finish</button>
               <button class="btn-delete" (click)="deleteTask(task)">Delete</button>
             </ng-container>
-
-            <!-- Editing Buttons -->
             <ng-container *ngIf="task.isEditing">
               <button class="btn-save" (click)="saveEdit(task)">Save</button>
               <button class="btn-cancel" (click)="cancelEdit(task)">Cancel</button>
@@ -100,12 +81,13 @@
 
     <hr class="divider">
 
-    <!-- History Section -->
+    <!-- HISTORY SECTION -->
     <section class="history-section">
       <div class="history-header">
         <h3>History</h3>
         <button class="btn-clear" (click)="clearHistory()" *ngIf="finishedTasks.length || deletedTasks.length">Clear History</button>
       </div>
+      
       <div class="history-grid">
         <div class="history-col">
           <h4>Finished</h4>

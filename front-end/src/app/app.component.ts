@@ -9,33 +9,25 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title(title: any) {
-    throw new Error('Method not implemented.');
-  }
-  // Authentication State
   isLoggedIn = false;
   showRegister = false;
   loginData = { email: '', password: '' };
   registerData = { name: '', email: '', password: '' };
 
-  // Task Data
   newTask = '';
-  tasks: any[] = []; // Used 'any' to allow 'isEditing' and 'tempText' UI properties
+  tasks: any[] = []; 
   finishedTasks: Task[] = [];
   deletedTasks: Task[] = [];
 
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
   ngOnInit() {
-    // sessionStorage ensures logout when the tab/browser is closed
     const token = sessionStorage.getItem('token');
     if (token) {
       this.isLoggedIn = true;
       this.loadAllTasks();
     }
   }
-
-  // --- AUTHENTICATION LOGIC ---
 
   login() {
     this.http.post('http://localhost:8000/api/login', this.loginData).subscribe({
@@ -44,7 +36,7 @@ export class AppComponent implements OnInit {
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Login failed: ' + (err.error?.message || 'Invalid credentials'))
+      error: (err) => alert('Login failed')
     });
   }
 
@@ -55,7 +47,7 @@ export class AppComponent implements OnInit {
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Registration failed: ' + (err.error?.message || 'Email already exists'))
+      error: (err) => alert('Registration failed')
     });
   }
 
@@ -67,13 +59,16 @@ export class AppComponent implements OnInit {
     this.deletedTasks = [];
   }
 
-  // --- TASK CRUD LOGIC ---
-
   loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
+      // 1. Active: Not finished AND Not deleted
       this.tasks = data.filter(t => !t.completedAt && !t.deletedAt);
+      
+      // 2. Finished: Has completedAt AND Not deleted
       this.finishedTasks = data.filter(t => t.completedAt && !t.deletedAt);
-      this.deletedTasks = data.filter(t => t.deletedAt);
+      
+      // 3. Deleted: Has deletedAt timestamp
+      this.deletedTasks = data.filter(t => t.deletedAt !== null && t.deletedAt !== undefined);
     });
   }
 
@@ -85,12 +80,9 @@ export class AppComponent implements OnInit {
       next: (newTask) => {
         this.tasks.push(newTask);
         this.newTask = '';
-      },
-      error: (err) => alert('Failed to add task: ' + err.statusText)
+      }
     });
   }
-
-  // --- INLINE EDIT LOGIC ---
 
   startEdit(task: any) {
     task.tempText = task.text;
@@ -99,7 +91,6 @@ export class AppComponent implements OnInit {
 
   cancelEdit(task: any) {
     task.isEditing = false;
-    task.tempText = '';
   }
 
   saveEdit(task: any) {
@@ -108,21 +99,15 @@ export class AppComponent implements OnInit {
     task.text = task.tempText;
 
     this.todoService.updateTask(task).subscribe({
-      next: () => {
-        task.isEditing = false;
-        task.tempText = '';
-      },
+      next: () => task.isEditing = false,
       error: () => {
-        task.text = originalText; // Revert on error
+        task.text = originalText;
         alert('Update failed');
       }
     });
   }
 
-  // --- STATUS UPDATES ---
-
   toggleDone(task: Task) {
-    // task.done is updated by ngModel automatically
     task.completedAt = task.done ? new Date().toLocaleString() : undefined;
     this.todoService.updateTask(task).subscribe();
   }

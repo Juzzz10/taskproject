@@ -11,17 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tasks', function (Blueprint $table) {
-            $table->id();
-            // This links the task to a user
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); 
-            $table->string('text');
-            $table->boolean('done')->default(false);
-            $table->string('completedAt')->nullable();
-            $table->string('deletedAt')->nullable();
-            $table->timestamps(); // This creates created_at and updated_at columns
-        });
-    }
+    Schema::create('tasks', function (Blueprint $table) {
+        $table->id();
+        // Change from foreignId to string
+        $table->string('user_name'); 
+        $table->string('text');
+        $table->boolean('done')->default(false);
+        $table->string('completedAt')->nullable();
+        $table->string('deletedAt')->nullable();
+        $table->timestamps();
+    });
+}
 
     /**
      * Reverse the migrations.
