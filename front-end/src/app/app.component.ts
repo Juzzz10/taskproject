@@ -9,6 +9,9 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
+  title(title: any) {
+    throw new Error('Method not implemented.');
+  }
   isLoggedIn = false;
   showRegister = false;
   loginData = { email: '', password: '' };
@@ -130,9 +133,21 @@ export class AppComponent implements OnInit {
   }
 
   clearHistory() {
-    this.finishedTasks = [];
-    this.deletedTasks = [];
+  // Confirm with the user first
+  if (confirm('Are you sure you want to permanently clear all history?')) {
+    this.todoService.clearHistory().subscribe({
+      next: () => {
+        // Only clear the UI arrays if the database deletion was successful
+        this.finishedTasks = [];
+        this.deletedTasks = [];
+      },
+      error: (err) => {
+        alert('Failed to clear history from database');
+        console.error(err);
+      }
+    });
   }
+}
 
   get remainingTasks() {
     return this.tasks.filter(t => !t.done).length;

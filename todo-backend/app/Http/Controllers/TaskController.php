@@ -10,20 +10,16 @@ class TaskController extends Controller
 {
     /**
      * Get all tasks for the logged-in user.
-     * We now filter by 'user_name' string instead of 'user_id'.
      */
     public function index()
     {
         $userName = Auth::user()->name;
-        
         $tasks = Task::where('user_name', $userName)->get();
-        
         return response()->json($tasks);
     }
 
     /**
      * Store a new task.
-     * We explicitly save the user's name into the database.
      */
     public function store(Request $request)
     {
@@ -31,7 +27,6 @@ class TaskController extends Controller
             'text' => 'required|string',
         ]);
 
-        // We create the task and manually assign the logged-in user's name
         $task = Task::create([
             'user_name' => Auth::user()->name, 
             'text' => $request->text,
@@ -42,12 +37,10 @@ class TaskController extends Controller
     }
 
     /**
-     * Update a task.
-     * Security check now compares names instead of IDs.
+     * Update a task (Edit text, Toggle check, or move to Finished/Deleted).
      */
     public function update(Request $request, Task $task)
     {
-        // Security check: Compare the strings
         if ($task->user_name !== Auth::user()->name) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -57,16 +50,34 @@ class TaskController extends Controller
     }
     
     /**
-     * Delete a task.
+     * Delete a single task.
      */
     public function destroy(Task $task)
     {
-        // Security check: Compare the strings
         if ($task->user_name !== Auth::user()->name) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $task->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+
+    /**
+     * PERMANENTLY CLEAR HISTORY
+     * Deletes all tasks that are marked as Finished OR Deleted.
+     */
+    public function clearHistory()
+    {
+        $userName = Auth::user()->name;
+
+        // Find tasks belonging to this user that have completedAt OR deletedAt
+        Task::where('user_name', $userName)
+            ->where(function ($query) {
+                $query->whereNotNull('completedAt')
+                      ->orWhereNotNull('deletedAt');
+            })
+            ->delete();
+
+        return response()->json(['message' => 'History cleared successfully']);
     }
 }

@@ -14,4 +14,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/debug-users', function() { return \App\Models\User::all(); });
+    Route::delete('/tasks-clear-history', [TaskController::class, 'clearHistory']);
 });

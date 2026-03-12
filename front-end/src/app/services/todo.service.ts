@@ -15,5 +15,11 @@ export class TodoService {
   updateTask(task: Task) { return this.http.put(`${this.url}/${task.id}`, task); }
 
   deleteTask(id: number) { return this.http.delete(`${this.url}/${id}`); }
+
+  clearHistory() {
+  // Note: We use the base URL + the new endpoint
+  const clearUrl = 'http://localhost:8000/api/tasks-clear-history';
+  return this.http.delete(clearUrl);
+}
   
 }
