@@ -1,12 +1,10 @@
 export interface Task {
-user_name: any;
-  id?: number;
+  id: number;
   text: string;
   done: boolean;
-  createdAt?: string;
-  completedAt?: string;
-  deletedAt?: string;
-  user_id?: number;
-  isEditing?: boolean; 
+  user_name: string;
+  completedAt?: string | null;
+  deletedAt?: string | null;
+  isEditing?: boolean;
   tempText?: string;
 }

@@ -18,7 +18,8 @@ export class AppComponent implements OnInit {
 
   // Task Data
   newTask = '';
-  tasks: any[] = []; 
+
+  tasks: Task[] = []; 
   finishedTasks: Task[] = [];
   deletedTasks: Task[] = [];
 
@@ -27,10 +28,7 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     // Check for session token on refresh
     const token = sessionStorage.getItem('token');
-    if (token) {
-      this.isLoggedIn = true;
-      this.loadAllTasks();
-    }
+    if (token) { this.isLoggedIn = true; this.loadAllTasks(); }
   }
 
   // --- AUTHENTICATION LOGIC ---
@@ -74,38 +72,28 @@ export class AppComponent implements OnInit {
     });
   }
 
-  logout() {
+  private clearLocalSession(): void {
     sessionStorage.removeItem('token');
     this.isLoggedIn = false;
-    this.tasks = [];
-    this.finishedTasks = [];
-    this.deletedTasks = [];
+    this.tasks = []; this.finishedTasks = []; this.deletedTasks = [];
   }
 
   // --- TASK CRUD LOGIC ---
 
   loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
-      // 1. Active: Not finished AND Not deleted
+      // Filter the data into three separate lists
       this.tasks = data.filter(t => !t.completedAt && !t.deletedAt);
-      
-      // 2. Finished: Has completedAt AND Not deleted
-      this.finishedTasks = data.filter(t => t.completedAt && !t.deletedAt);
-      
-      // 3. Deleted: Has deletedAt timestamp
-      this.deletedTasks = data.filter(t => t.deletedAt !== null && t.deletedAt !== undefined);
+      this.finishedTasks = data.filter(t => !!t.completedAt && !t.deletedAt);
+      this.deletedTasks = data.filter(t => !!t.deletedAt);
     });
   }
 
-  addTask() {
+  addTask(): void {
     if (!this.newTask.trim()) return;
-    const taskData = { text: this.newTask, done: false };
-
-    this.todoService.addTask(taskData).subscribe({
-      next: (newTask) => {
-        this.tasks.push(newTask);
-        this.newTask = '';
-      }
+    this.todoService.addTask({ text: this.newTask, done: false }).subscribe((task: Task) => {
+      this.tasks.push(task);
+      this.newTask = '';
     });
   }
 
@@ -124,14 +112,7 @@ export class AppComponent implements OnInit {
     if (!task.tempText.trim()) return;
     const originalText = task.text;
     task.text = task.tempText;
-
-    this.todoService.updateTask(task).subscribe({
-      next: () => task.isEditing = false,
-      error: () => {
-        task.text = originalText;
-        alert('Update failed');
-      }
-    });
+    this.todoService.updateTask(task).subscribe(() => task.isEditing = false);
   }
 
   // --- STATUS UPDATES ---
@@ -141,20 +122,16 @@ export class AppComponent implements OnInit {
     this.todoService.updateTask(task).subscribe();
   }
 
-  deleteTask(task: Task) {
-    task.deletedAt = new Date().toLocaleString();
-    this.todoService.updateTask(task).subscribe(() => {
-      this.tasks = this.tasks.filter(t => t.id !== task.id);
-      this.deletedTasks.push(task);
+  deleteTask(task: Task): void {
+    this.todoService.deleteTask(task.id).subscribe(() => {
+        this.loadAllTasks(); // Reload to move to history
     });
   }
 
-  moveToFinished(task: Task) {
-    if (!task.done) return;
+  moveToFinished(task: Task): void {
     task.completedAt = new Date().toLocaleString();
     this.todoService.updateTask(task).subscribe(() => {
-      this.tasks = this.tasks.filter(t => t.id !== task.id);
-      this.finishedTasks.push(task);
+      this.loadAllTasks(); // Reload to move to history
     });
   }
 
@@ -177,7 +154,6 @@ export class AppComponent implements OnInit {
     return this.tasks.filter(t => !t.done).length;
   }
 
-  trackByFn(index: number, item: Task) {
-    return item.id;
-  }
+  get remainingTasks(): number { return this.tasks.filter(t => !t.done).length; }
+  trackByFn(i: number, t: Task): number { return t.id; }
 }

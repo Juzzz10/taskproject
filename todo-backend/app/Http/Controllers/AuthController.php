@@ -12,8 +12,8 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|string|email|max:255|unique:users',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
         ]);
 
@@ -40,6 +40,8 @@ class AuthController extends Controller
         if (!$user || !Hash::check($data['password'], $user->password)) {
             return response()->json(['message' => 'Invalid email or password'], 401);
         }
+        return response()->json(['token' => $user->createToken('token')->plainTextToken, 'user' => $user]);
+    }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
