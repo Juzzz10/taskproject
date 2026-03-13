@@ -9,14 +9,14 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title(title: any) {
-    throw new Error('Method not implemented.');
-  }
+  
+  // Authentication State
   isLoggedIn = false;
   showRegister = false;
   loginData = { email: '', password: '' };
   registerData = { name: '', email: '', password: '' };
 
+  // Task Data
   newTask = '';
   tasks: any[] = []; 
   finishedTasks: Task[] = [];
@@ -25,6 +25,7 @@ export class AppComponent implements OnInit {
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
   ngOnInit() {
+    // Check for session token on refresh
     const token = sessionStorage.getItem('token');
     if (token) {
       this.isLoggedIn = true;
@@ -32,41 +33,46 @@ export class AppComponent implements OnInit {
     }
   }
 
+  // --- AUTHENTICATION LOGIC ---
+
   login() {
-    this.http.post('http://localhost:8000/api/login', this.loginData).subscribe({
+    // Updated URL with /auth/ prefix
+    this.http.post('http://localhost:8000/api/auth/login', this.loginData).subscribe({
       next: (res: any) => {
         sessionStorage.setItem('token', res.token);
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Login failed')
+      error: (err) => {
+        const msg = err.status === 401 ? 'Invalid email or password' : 'Login failed: Server error';
+        alert(msg);
+      }
     });
   }
 
   register() {
-  this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
-    next: (res: any) => {
-      sessionStorage.setItem('token', res.token);
-      this.isLoggedIn = true;
-      this.loadAllTasks();
-    },
-    error: (err) => {
-
-      if (err.status === 422) {
-        const errors = err.error.errors;
-     
-        if (errors && errors.email) {
-          alert('Email already exists');
+    // Updated URL with /auth/ prefix
+    this.http.post('http://localhost:8000/api/auth/register', this.registerData).subscribe({
+      next: (res: any) => {
+        sessionStorage.setItem('token', res.token);
+        this.isLoggedIn = true;
+        this.loadAllTasks();
+      },
+      error: (err) => {
+        // Handle Laravel validation errors (specifically duplicate email)
+        if (err.status === 422) {
+          const errors = err.error.errors;
+          if (errors && errors.email) {
+            alert('Email already exists');
+          } else {
+            alert('Registration failed: Please check your details');
+          }
         } else {
-          alert('Registration failed: Please check your details');
+          alert('Registration failed: Server error');
         }
-      } else {
-      
-        alert('Registration failed: Server error');
       }
-    }
-  });
-}
+    });
+  }
 
   logout() {
     sessionStorage.removeItem('token');
@@ -75,6 +81,8 @@ export class AppComponent implements OnInit {
     this.finishedTasks = [];
     this.deletedTasks = [];
   }
+
+  // --- TASK CRUD LOGIC ---
 
   loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
@@ -101,6 +109,8 @@ export class AppComponent implements OnInit {
     });
   }
 
+  // --- INLINE EDIT LOGIC ---
+
   startEdit(task: any) {
     task.tempText = task.text;
     task.isEditing = true;
@@ -123,6 +133,8 @@ export class AppComponent implements OnInit {
       }
     });
   }
+
+  // --- STATUS UPDATES ---
 
   toggleDone(task: Task) {
     task.completedAt = task.done ? new Date().toLocaleString() : undefined;
@@ -147,21 +159,19 @@ export class AppComponent implements OnInit {
   }
 
   clearHistory() {
-  // Confirm with the user first
-  if (confirm('Are you sure you want to permanently clear all history?')) {
-    this.todoService.clearHistory().subscribe({
-      next: () => {
-        // Only clear the UI arrays if the database deletion was successful
-        this.finishedTasks = [];
-        this.deletedTasks = [];
-      },
-      error: (err) => {
-        alert('Failed to clear history from database');
-        console.error(err);
-      }
-    });
+    if (confirm('Are you sure you want to permanently clear all history?')) {
+      this.todoService.clearHistory().subscribe({
+        next: () => {
+          this.finishedTasks = [];
+          this.deletedTasks = [];
+        },
+        error: (err) => {
+          alert('Failed to clear history from database');
+          console.error(err);
+        }
+      });
+    }
   }
-}
 
   get remainingTasks() {
     return this.tasks.filter(t => !t.done).length;

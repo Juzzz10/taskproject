@@ -13,13 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // This ensures Sanctum (login) works correctly for your API
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        ]);
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // This stops the "Route [login] not defined" error.
-        // It tells Laravel: "If the request starts with /api/, send JSON, not a redirect."
-        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
+        // We use a generic variable name $e to avoid the Throwable import warning
+        $exceptions->shouldRenderJsonWhen(function (Request $request, $e) {
             if ($request->is('api/*')) {
                 return true;
             }
