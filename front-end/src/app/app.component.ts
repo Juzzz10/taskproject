@@ -16,158 +16,108 @@ export class AppComponent implements OnInit {
   showRegister = false;
   loginData = { email: '', password: '' };
   registerData = { name: '', email: '', password: '' };
-
   newTask = '';
-  tasks: any[] = []; 
+
+  tasks: Task[] = []; 
   finishedTasks: Task[] = [];
   deletedTasks: Task[] = [];
 
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     const token = sessionStorage.getItem('token');
-    if (token) {
-      this.isLoggedIn = true;
-      this.loadAllTasks();
-    }
+    if (token) { this.isLoggedIn = true; this.loadAllTasks(); }
   }
 
-  login() {
-    this.http.post('http://localhost:8000/api/login', this.loginData).subscribe({
+  login(): void {
+    this.http.post('http://localhost:8000/api/auth/login', this.loginData).subscribe({
       next: (res: any) => {
         sessionStorage.setItem('token', res.token);
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: (err) => alert('Login failed')
+      error: () => alert('Login failed')
     });
   }
 
-  register() {
-  this.http.post('http://localhost:8000/api/register', this.registerData).subscribe({
-    next: (res: any) => {
-      sessionStorage.setItem('token', res.token);
-      this.isLoggedIn = true;
-      this.loadAllTasks();
-    },
-    error: (err) => {
-
-      if (err.status === 422) {
-        const errors = err.error.errors;
-     
-        if (errors && errors.email) {
-          alert('Email already exists');
-        } else {
-          alert('Registration failed: Please check your details');
-        }
-      } else {
-      
-        alert('Registration failed: Server error');
+  register(): void {
+    this.http.post('http://localhost:8000/api/auth/register', this.registerData).subscribe({
+      next: (res: any) => {
+        sessionStorage.setItem('token', res.token);
+        this.isLoggedIn = true;
+        this.loadAllTasks();
+      },
+      error: (err) => {
+        if (err.status === 422) alert('Email already exists');
+        else alert('Registration failed');
       }
-    }
-  });
-}
+    });
+  }
 
-  logout() {
+  logout(): void {
+    // REVOKE TOKEN ON BACKEND
+    this.http.post('http://localhost:8000/api/auth/logout', {}).subscribe({
+      next: () => this.clearLocalSession(),
+      error: () => this.clearLocalSession()
+    });
+  }
+
+  private clearLocalSession(): void {
     sessionStorage.removeItem('token');
     this.isLoggedIn = false;
-    this.tasks = [];
-    this.finishedTasks = [];
-    this.deletedTasks = [];
+    this.tasks = []; this.finishedTasks = []; this.deletedTasks = [];
   }
 
-  loadAllTasks() {
+  loadAllTasks(): void {
     this.todoService.getTasks().subscribe((data: Task[]) => {
-      // 1. Active: Not finished AND Not deleted
+      // Filter the data into three separate lists
       this.tasks = data.filter(t => !t.completedAt && !t.deletedAt);
-      
-      // 2. Finished: Has completedAt AND Not deleted
-      this.finishedTasks = data.filter(t => t.completedAt && !t.deletedAt);
-      
-      // 3. Deleted: Has deletedAt timestamp
-      this.deletedTasks = data.filter(t => t.deletedAt !== null && t.deletedAt !== undefined);
+      this.finishedTasks = data.filter(t => !!t.completedAt && !t.deletedAt);
+      this.deletedTasks = data.filter(t => !!t.deletedAt);
     });
   }
 
-  addTask() {
+  addTask(): void {
     if (!this.newTask.trim()) return;
-    const taskData = { text: this.newTask, done: false };
-
-    this.todoService.addTask(taskData).subscribe({
-      next: (newTask) => {
-        this.tasks.push(newTask);
-        this.newTask = '';
-      }
+    this.todoService.addTask({ text: this.newTask, done: false }).subscribe((task: Task) => {
+      this.tasks.push(task);
+      this.newTask = '';
     });
   }
 
-  startEdit(task: any) {
-    task.tempText = task.text;
-    task.isEditing = true;
-  }
-
-  cancelEdit(task: any) {
-    task.isEditing = false;
-  }
-
-  saveEdit(task: any) {
-    if (!task.tempText.trim()) return;
-    const originalText = task.text;
+  startEdit(task: Task): void { task.tempText = task.text; task.isEditing = true; }
+  cancelEdit(task: Task): void { task.isEditing = false; }
+  saveEdit(task: Task): void {
+    if (!task.tempText?.trim()) return;
     task.text = task.tempText;
-
-    this.todoService.updateTask(task).subscribe({
-      next: () => task.isEditing = false,
-      error: () => {
-        task.text = originalText;
-        alert('Update failed');
-      }
-    });
+    this.todoService.updateTask(task).subscribe(() => task.isEditing = false);
   }
 
-  toggleDone(task: Task) {
-    task.completedAt = task.done ? new Date().toLocaleString() : undefined;
+  toggleDone(task: Task): void {
     this.todoService.updateTask(task).subscribe();
   }
 
-  deleteTask(task: Task) {
-    task.deletedAt = new Date().toLocaleString();
-    this.todoService.updateTask(task).subscribe(() => {
-      this.tasks = this.tasks.filter(t => t.id !== task.id);
-      this.deletedTasks.push(task);
+  deleteTask(task: Task): void {
+    this.todoService.deleteTask(task.id).subscribe(() => {
+        this.loadAllTasks(); // Reload to move to history
     });
   }
 
-  moveToFinished(task: Task) {
-    if (!task.done) return;
+  moveToFinished(task: Task): void {
     task.completedAt = new Date().toLocaleString();
     this.todoService.updateTask(task).subscribe(() => {
-      this.tasks = this.tasks.filter(t => t.id !== task.id);
-      this.finishedTasks.push(task);
+      this.loadAllTasks(); // Reload to move to history
     });
   }
 
-  clearHistory() {
-  // Confirm with the user first
-  if (confirm('Are you sure you want to permanently clear all history?')) {
-    this.todoService.clearHistory().subscribe({
-      next: () => {
-        // Only clear the UI arrays if the database deletion was successful
-        this.finishedTasks = [];
-        this.deletedTasks = [];
-      },
-      error: (err) => {
-        alert('Failed to clear history from database');
-        console.error(err);
-      }
-    });
-  }
-}
-
-  get remainingTasks() {
-    return this.tasks.filter(t => !t.done).length;
+  clearHistory(): void {
+    if (confirm('Clear history?')) {
+      this.todoService.clearHistory().subscribe(() => {
+        this.finishedTasks = []; this.deletedTasks = [];
+      });
+    }
   }
 
-  trackByFn(index: number, item: Task) {
-    return item.id;
-  }
+  get remainingTasks(): number { return this.tasks.filter(t => !t.done).length; }
+  trackByFn(i: number, t: Task): number { return t.id; }
 }
