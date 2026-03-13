@@ -9,13 +9,14 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title(title: any) {
-    throw new Error('Method not implemented.');
-  }
+  
+  // Authentication State
   isLoggedIn = false;
   showRegister = false;
   loginData = { email: '', password: '' };
   registerData = { name: '', email: '', password: '' };
+
+  // Task Data
   newTask = '';
 
   tasks: Task[] = []; 
@@ -24,23 +25,31 @@ export class AppComponent implements OnInit {
 
   constructor(private todoService: TodoService, private http: HttpClient) {}
 
-  ngOnInit(): void {
+  ngOnInit() {
+    // Check for session token on refresh
     const token = sessionStorage.getItem('token');
     if (token) { this.isLoggedIn = true; this.loadAllTasks(); }
   }
 
-  login(): void {
+  // --- AUTHENTICATION LOGIC ---
+
+  login() {
+    // Updated URL with /auth/ prefix
     this.http.post('http://localhost:8000/api/auth/login', this.loginData).subscribe({
       next: (res: any) => {
         sessionStorage.setItem('token', res.token);
         this.isLoggedIn = true;
         this.loadAllTasks();
       },
-      error: () => alert('Login failed')
+      error: (err) => {
+        const msg = err.status === 401 ? 'Invalid email or password' : 'Login failed: Server error';
+        alert(msg);
+      }
     });
   }
 
-  register(): void {
+  register() {
+    // Updated URL with /auth/ prefix
     this.http.post('http://localhost:8000/api/auth/register', this.registerData).subscribe({
       next: (res: any) => {
         sessionStorage.setItem('token', res.token);
@@ -48,17 +57,18 @@ export class AppComponent implements OnInit {
         this.loadAllTasks();
       },
       error: (err) => {
-        if (err.status === 422) alert('Email already exists');
-        else alert('Registration failed');
+        // Handle Laravel validation errors (specifically duplicate email)
+        if (err.status === 422) {
+          const errors = err.error.errors;
+          if (errors && errors.email) {
+            alert('Email already exists');
+          } else {
+            alert('Registration failed: Please check your details');
+          }
+        } else {
+          alert('Registration failed: Server error');
+        }
       }
-    });
-  }
-
-  logout(): void {
-    // REVOKE TOKEN ON BACKEND
-    this.http.post('http://localhost:8000/api/auth/logout', {}).subscribe({
-      next: () => this.clearLocalSession(),
-      error: () => this.clearLocalSession()
     });
   }
 
@@ -68,7 +78,9 @@ export class AppComponent implements OnInit {
     this.tasks = []; this.finishedTasks = []; this.deletedTasks = [];
   }
 
-  loadAllTasks(): void {
+  // --- TASK CRUD LOGIC ---
+
+  loadAllTasks() {
     this.todoService.getTasks().subscribe((data: Task[]) => {
       // Filter the data into three separate lists
       this.tasks = data.filter(t => !t.completedAt && !t.deletedAt);
@@ -85,15 +97,28 @@ export class AppComponent implements OnInit {
     });
   }
 
-  startEdit(task: Task): void { task.tempText = task.text; task.isEditing = true; }
-  cancelEdit(task: Task): void { task.isEditing = false; }
-  saveEdit(task: Task): void {
-    if (!task.tempText?.trim()) return;
+  // --- INLINE EDIT LOGIC ---
+
+  startEdit(task: any) {
+    task.tempText = task.text;
+    task.isEditing = true;
+  }
+
+  cancelEdit(task: any) {
+    task.isEditing = false;
+  }
+
+  saveEdit(task: any) {
+    if (!task.tempText.trim()) return;
+    const originalText = task.text;
     task.text = task.tempText;
     this.todoService.updateTask(task).subscribe(() => task.isEditing = false);
   }
 
-  toggleDone(task: Task): void {
+  // --- STATUS UPDATES ---
+
+  toggleDone(task: Task) {
+    task.completedAt = task.done ? new Date().toLocaleString() : undefined;
     this.todoService.updateTask(task).subscribe();
   }
 
@@ -110,12 +135,23 @@ export class AppComponent implements OnInit {
     });
   }
 
-  clearHistory(): void {
-    if (confirm('Clear history?')) {
-      this.todoService.clearHistory().subscribe(() => {
-        this.finishedTasks = []; this.deletedTasks = [];
+  clearHistory() {
+    if (confirm('Are you sure you want to permanently clear all history?')) {
+      this.todoService.clearHistory().subscribe({
+        next: () => {
+          this.finishedTasks = [];
+          this.deletedTasks = [];
+        },
+        error: (err) => {
+          alert('Failed to clear history from database');
+          console.error(err);
+        }
       });
     }
+  }
+
+  get remainingTasks() {
+    return this.tasks.filter(t => !t.done).length;
   }
 
   get remainingTasks(): number { return this.tasks.filter(t => !t.done).length; }
